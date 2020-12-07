@@ -6,26 +6,6 @@ import pandas as pd
 import datetime as dt
 
 
-def scrape_all():
-    # Initiate headless driver for deployment
-    browser = Browser("chrome", executable_path="chromedriver", headless=True)
-
-    news_title, news_paragraph = mars_news(browser)
-
-    # Run all scraping functions and store results in a dictionary
-    data = {
-        "news_title": news_title,
-        "news_paragraph": news_paragraph,
-        "featured_image": featured_image(browser),
-        "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
-    }
-
-    # Stop webdriver and return data
-    browser.quit()
-    return data
-
-
 def mars_news(browser):
 
     # Scrape Mars News
@@ -85,6 +65,8 @@ def featured_image(browser):
 
     return img_url
 
+
+
 def mars_facts():
     # Add try/except for error handling
     try:
@@ -100,6 +82,68 @@ def mars_facts():
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+
+
+
+def hemisphere(browser): 
+    # Visit the URL 
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url) 
+    
+    # Create a list to hold the images and titles.
+    hemisphere_image_urls = []
+
+    # Write code to retrieve the image urls and titles for each hemisphere.
+    image_links = browser.find_by_css("a.product-item h3") 
+    for image in range(len(image_links)):
+        hemispheres = {}
+        # Find CSS element and click 
+        browser.find_by_css("a.product-item h3")[image].click() 
+        # Find download button (Sample)
+        sample_button = browser.find_by_text("Sample").first
+        hemispheres["img_url"] = sample_button["href"] 
+        hemispheres["title"] = browser.find_by_css("h2.title").text 
+        hemisphere_image_urls.append(hemispheres)
+        browser.back() 
+        
+    return hemisphere_image_urls  
+
+
+
+def scrape_hemisphere(html_text):
+    hemisphere_soup = soup(html_text, "html.parser")
+    try: 
+        title = hemisphere_soup.find("h2", class_="title").get_text()
+        sample_button = hemisphere_soup.find("a", text="Sample").get("href")
+    except AttributeError:
+        title = None
+        sample_button = None 
+    hemisphere = {
+        "title": title,
+        "img_url": sample_button
+    }
+    return hemisphere
+
+
+
+def scrape_all():
+    browser = Browser("chrome", executable_path="chromedriver", headless=True)
+
+    news_title, news_paragraph = mars_news(browser)
+    img_url = featured_image(browser)
+    facts = mars_facts()
+    hemisphere_image_urls = hemisphere(browser)
+    data = {
+        "news_title": news_title,
+        "news_paragraph": news_paragraph,
+        "featured_image": img_url,
+        "facts": facts,
+        "hemispheres": hemisphere_image_urls,
+        "last_modified": dt.datetime.now()
+    }
+    browser.quit()
+    return data 
+
 
 if __name__ == "__main__":
 
